@@ -1,0 +1,62 @@
+name: coq-882
+base: core18
+version: '8.8.2'
+summary: Coq
+description: |
+  Coq Coq
+
+grade: stable
+confinement: devmode # use 'strict' once you have the right plugs and slots
+
+parts:
+  opam:
+    plugin: make
+    source: https://github.com/ocaml/opam.git
+    source-tag: '2.0.2'
+    source-depth: 1
+    override-build: |
+      chmod a+x shell/install.sh
+      echo . | sh shell/install.sh
+      mkdir -p ../install/bin/
+      cp opam ../install/bin/
+
+  coq-882-opam-root:
+    after: [opam]
+    plugin: nil
+    build-packages: [m4, gcc, unzip, git, make]
+    stage-packages: [git, make]
+    override-build: |
+      mkdir -p /snap/coq-882/current/opam-root
+      opam init --disable-sandboxing -j 2 -c 4.07.1 --root=/snap/coq-882/current/opam-root
+
+  coq-882:
+    after: [coq-882-opam-root]
+    plugin: nil
+    build-packages: [libgtksourceview2.0-dev]
+    stage-packages: [libgtksourceview2.0-0]
+    override-build: |
+      opam repo --root=/snap/coq-882/current/opam-root add coq-released http://coq.inria.fr/opam/released
+      opam pin --root=/snap/coq-882/current/opam-root -y add coq 8.8.2
+      opam pin --root=/snap/coq-882/current/opam-root -y add coqide 8.8.2
+      opam clean --root=/snap/coq-882/current/opam-root -a -c
+      mv /snap/coq-882/current/opam-root ../install/
+
+apps:
+  coqtop:
+    command: opam-root/4.07.1/bin/coqtop
+  coqc:
+    command: opam-root/4.07.1/bin/coqc
+  coq_makefile:
+    command: opam-root/4.07.1/bin/coq_makefile
+    environment:
+      COQBIN: /snap/coq-882/current/opam-root/4.07.1/bin/
+  coqide:
+    command: opam-root/4.07.1/bin/coqide
+    plugs: [desktop]
+    desktop: ../project/snap/gui/coqide.desktop
+  opam:
+    command: opam
+    environment:
+      OPAMROOT: /snap/coq-882/current/opam-root
+
+
